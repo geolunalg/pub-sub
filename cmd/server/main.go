@@ -22,8 +22,20 @@ func main() {
 
 	publishCh, err := conn.Channel()
 	if err != nil {
-		log.Fatalf("could not create channel: %v", err)
+		log.Fatalf("could not subscribe to pause: %v", err)
 	}
+
+	_, queue, err := pubsub.DeclareAndBind(
+		conn,
+		routing.ExchangePerilDirect,
+		routing.GameLogSlug,
+		routing.GameLogSlug+".",
+		pubsub.SimpleQueueDurable,
+	)
+	if err != nil {
+		log.Fatalf("")
+	}
+	fmt.Printf("Queue %v declared and bound!\n", queue.Name)
 
 	gamelogic.PrintServerHelp()
 
