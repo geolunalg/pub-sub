@@ -3,8 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
-	"os/signal"
 
 	"github.com/geolunalg/pub-sub/internal/gamelogic"
 	"github.com/geolunalg/pub-sub/internal/pubsub"
@@ -40,9 +38,37 @@ func main() {
 	}
 	fmt.Printf("Queue %v declared and bound!\n", queue.Name)
 
-	// wait for ctrl+c
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, os.Interrupt)
-	<-signalChan
+	gamestate := gamelogic.NewGameState(username)
+
+OuterLoop:
+	for {
+		words := gamelogic.GetInput()
+		switch words[0] {
+		case "spawn":
+			err = gamestate.CommandSpawn(words)
+			if err != nil {
+				log.Fatalf("something when wrong on spawn: %v", err)
+			}
+		case "move":
+			_, err := gamestate.CommandMove(words)
+			if err != nil {
+				log.Fatalf("something when wrong on move: %v", err)
+			}
+			fmt.Println("Move was successful")
+		case "status":
+			gamestate.CommandStatus()
+		case "help":
+			gamelogic.PrintClientHelp()
+		case "spam":
+			fmt.Println("Spamming not allowed yet!")
+		case "quit":
+			gamelogic.PrintQuit()
+			break OuterLoop
+		default:
+			fmt.Println("Unknow command")
+			gamelogic.PrintClientHelp()
+		}
+	}
+	
 	fmt.Println("RabbitMQ connection closed.")
 }
