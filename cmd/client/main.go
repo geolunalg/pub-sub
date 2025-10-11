@@ -40,6 +40,18 @@ func main() {
 
 	gamestate := gamelogic.NewGameState(username)
 
+	err = pubsub.SubscribeJSON(
+		conn,
+		routing.ExchangePerilDirect,
+		routing.PauseKey+"."+gamestate.GetUsername(),
+		routing.PauseKey,
+		pubsub.SimpleQueueTransient,
+		handlerPause(gamestate),
+	)
+	if err != nil {
+		log.Fatalf("could not subscribe to pause: %v", err)
+	}
+
 OuterLoop:
 	for {
 		words := gamelogic.GetInput()
@@ -47,14 +59,13 @@ OuterLoop:
 		case "spawn":
 			err = gamestate.CommandSpawn(words)
 			if err != nil {
-				log.Fatalf("something when wrong on spawn: %v", err)
+				fmt.Println(err)
 			}
 		case "move":
 			_, err := gamestate.CommandMove(words)
 			if err != nil {
-				log.Fatalf("something when wrong on move: %v", err)
+				fmt.Println(err)
 			}
-			fmt.Println("Move was successful")
 		case "status":
 			gamestate.CommandStatus()
 		case "help":
@@ -69,6 +80,6 @@ OuterLoop:
 			gamelogic.PrintClientHelp()
 		}
 	}
-	
+
 	fmt.Println("RabbitMQ connection closed.")
 }
