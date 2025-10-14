@@ -65,6 +65,9 @@ func main() {
 		pubsub.SimpleQueueDurable,
 		handlerWar(gamestate),
 	)
+	if err != nil {
+		log.Fatalf("could not subscribe to war declarations: %v", err)
+	}
 
 	err = pubsub.SubscribeJSON(
 		conn,
