@@ -33,7 +33,7 @@ func handlerMove(gs *gamelogic.GameState, publishCh *amqp.Channel) func(gamelogi
 				fmt.Printf("error: %s\n", err)
 				return pubsub.NackRequeue
 			}
-			return pubsub.NackRequeue
+			return pubsub.Ack
 		}
 
 		fmt.Println("error: unknown move outcome")
@@ -55,7 +55,7 @@ func handlerWar(gs *gamelogic.GameState) func(dw gamelogic.RecognitionOfWar) pub
 		case gamelogic.WarOutcomeYouWon:
 			return pubsub.Ack
 		case gamelogic.WarOutcomeDraw:
-			return  pubsub.Ack
+			return pubsub.Ack
 		}
 
 		fmt.Println("error: unknown war outcome")
