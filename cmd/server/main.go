@@ -22,14 +22,14 @@ func main() {
 
 	publishCh, err := conn.Channel()
 	if err != nil {
-		log.Fatalf("could not subscribe to pause: %v", err)
+		log.Fatalf("could not create channel: %v", err)
 	}
 
 	_, queue, err := pubsub.DeclareAndBind(
 		conn,
-		routing.ExchangePerilDirect,
+		routing.ExchangePerilTopic,
 		routing.GameLogSlug,
-		routing.GameLogSlug+".",
+		routing.GameLogSlug+".*",
 		pubsub.SimpleQueueDurable,
 	)
 	if err != nil {
@@ -39,12 +39,14 @@ func main() {
 
 	gamelogic.PrintServerHelp()
 
-OuterLoop:
 	for {
 		words := gamelogic.GetInput()
+		if len(words) == 0 {
+			continue
+		}
 		switch words[0] {
 		case "pause":
-			fmt.Println("sending a pause message")
+			fmt.Println("Publishing paused game state")
 			err = pubsub.PublishJSON(
 				publishCh,
 				routing.ExchangePerilDirect,
@@ -56,9 +58,8 @@ OuterLoop:
 			if err != nil {
 				log.Printf("could not publish time: %v", err)
 			}
-			fmt.Println("Pause message sent!")
 		case "resume":
-			fmt.Println("sending a resume message")
+			fmt.Println("Publishing resumes game state")
 			err = pubsub.PublishJSON(
 				publishCh,
 				routing.ExchangePerilDirect,
@@ -70,15 +71,11 @@ OuterLoop:
 			if err != nil {
 				log.Printf("could not publish time: %v", err)
 			}
-			fmt.Println("Resume message sent!")
 		case "quit":
-			fmt.Println("exiting the program")
-			break OuterLoop
-		case "help":
-			gamelogic.PrintServerHelp()
+			log.Println("goodbye")
+			return
 		default:
-			fmt.Println("command unrecognized")
-			gamelogic.PrintServerHelp()
+			fmt.Println("unknown command")
 		}
 	}
 }

@@ -9,12 +9,6 @@ import (
 
 type Acktype int
 
-const (
-	Ack Acktype = iota
-	NackRequeue
-	NackDiscard
-)
-
 type SimpleQueueType int
 
 const (
@@ -22,12 +16,18 @@ const (
 	SimpleQueueTransient
 )
 
+const (
+	Ack Acktype = iota
+	NackDiscard
+	NackRequeue
+)
+
 func SubscribeJSON[T any](
 	conn *amqp.Connection,
 	exchange,
 	queueName,
 	key string,
-	queueType SimpleQueueType, // an enum to represent "durable" or "transient"
+	queueType SimpleQueueType,
 	handler func(T) Acktype,
 ) error {
 	ch, queue, err := DeclareAndBind(conn, exchange, queueName, key, queueType)
@@ -65,19 +65,13 @@ func SubscribeJSON[T any](
 			switch handler(target) {
 			case Ack:
 				msg.Ack(false)
-				fmt.Println("Ack")
-			case NackRequeue:
-				msg.Nack(false, true)
-				fmt.Println("NackRequeue")
 			case NackDiscard:
 				msg.Nack(false, false)
-				fmt.Println("NackDiscard")
-			default:
-				fmt.Println("num be of type [Ack, NackRequeue, NackDiscard]")
+			case NackRequeue:
+				msg.Nack(false, true)
 			}
 		}
 	}()
-
 	return nil
 }
 
@@ -93,17 +87,15 @@ func DeclareAndBind(
 		return nil, amqp.Queue{}, fmt.Errorf("could not create channel: %v", err)
 	}
 
-	table := amqp.Table{
-		"x-dead-letter-exchange": "peril_dlx",
-	}
-
 	queue, err := ch.QueueDeclare(
 		queueName,                       // name
 		queueType == SimpleQueueDurable, // durable
 		queueType != SimpleQueueDurable, // delete when unused
 		queueType != SimpleQueueDurable, // exclusive
 		false,                           // no-wait
-		table,                           // args
+		amqp.Table{
+			"x-dead-letter-exchange": "peril_dlx",
+		},
 	)
 	if err != nil {
 		return nil, amqp.Queue{}, fmt.Errorf("could not declare queue: %v", err)
